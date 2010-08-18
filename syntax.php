@@ -121,9 +121,9 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 	  
       //If it s a usr report add it to the pseudo db
       
-      if ($_REQUEST['captcha'])
+      if (($_REQUEST['captcha']) || ($_REQUEST['severity']))
       {
-          if (($_REQUEST['captcha']==$_SESSION['security_number']) && ($_REQUEST['admin_edit']!='yes') && (($data['display']=='form') || (!($data['display']))))
+          if ((($_REQUEST['captcha']==$_SESSION['security_number'])||($this->getConf('use_captcha')==0)) && ($_REQUEST['admin_edit']!='yes') && (($data['display']=='form') || (!($data['display']))))
             {
             if (checkSecurityToken())
                 {
@@ -209,7 +209,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 
   function _emailForNewBug($id,$project,$version,$severity,$description)
     {
-        if ($this->getConf('address_email')==True)
+        if ($this->getConf('send_email')==1)
         {
             $body='A new bug have entered in the project : '.$project.' (id : '.$id.")\n\n".'Version : '.$version.' ('.$severity.") :\n".$description;
             $subject='A new bug have entered in the project : '.$project.'Version :'.$version.' ('.$severity.') : '.$id;
@@ -334,8 +334,9 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
       '       <option value="Feature Request" >Feature Request</option>'.
       '       <option value="Major Bug" >Major Bug</option>'.
 	  '	 </select></span>'.      
-      '<br><label> Description : </label><br /><textarea id="dokumicrobugtracker__option" name="description" cols=80 rows=6 type="text"/>'.$_REQUEST['description'].'</textarea><br />'.
-      '<span><img src="'.DOKU_BASE.'lib/plugins/dokumicrobugtracker/image.php"><label>what s the result? </label><input id="dokumicrobugtracker__option" name="captcha" type="text" maxlength="3" value=""/></span>';      
+      '<br><label> Description : </label><br /><textarea id="dokumicrobugtracker__option" name="description" cols=80 rows=6 type="text"/>'.$_REQUEST['description'].'</textarea><br />';
+    if ($this->getConf('use_captcha')==1)  
+     $ret .= '<span><img src="'.DOKU_BASE.'lib/plugins/dokumicrobugtracker/image.php"><label>what s the result? </label><input id="dokumicrobugtracker__option" name="captcha" type="text" maxlength="3" value=""/></span>';      
 
     $ret .= '<input class="button" type="submit" '.
       'value="Report" />'.
