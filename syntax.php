@@ -342,7 +342,6 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
       'value="Report" />'.
       '</div></form>';
 				
-    $ret .= 'DEBUG:'.$ID[0].':'.$ID[1];
     return $ret;
   }  
   
