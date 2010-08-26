@@ -94,12 +94,12 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 	  {
 		if (checkSecurityToken())
 		{
-			$id = (int) $_REQUEST['edit_id'];
-			$bugs[$id]['version'] = htmlspecialchars(stripslashes($_REQUEST['edit_version']));
-			$bugs[$id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['edit_severity']));
-			$bugs[$id]['status'] = htmlspecialchars(stripslashes($_REQUEST['edit_status']));
-			$bugs[$id]['description'] = htmlspecialchars(stripslashes($_REQUEST['edit_description']));
-			$bugs[$id]['resolution'] = htmlspecialchars(stripslashes($_REQUEST['edit_resolution']));
+			$bug_id = (int) $_REQUEST['edit_id'];
+			$bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['edit_version']));
+			$bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['edit_severity']));
+			$bugs[$bug_id]['status'] = htmlspecialchars(stripslashes($_REQUEST['edit_status']));
+			$bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['edit_description']));
+			$bugs[$bug_id]['resolution'] = htmlspecialchars(stripslashes($_REQUEST['edit_resolution']));
 			//Ecriture en pseudo db
 			$fh = fopen($pfile, 'w');
 			fwrite($fh, serialize($bugs));
@@ -111,8 +111,8 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 	  {
 		if (checkSecurityToken())
 		{
-			$id = (int) $_REQUEST['edit_id'];
-			unset($bugs[$id]);
+			$bug_id = (int) $_REQUEST['edit_id'];
+			unset($bugs[$bug_id]);
 			$fh = fopen($pfile, 'w');
 			fwrite($fh, serialize($bugs));
 			fclose($fh);
@@ -128,19 +128,20 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
             if (checkSecurityToken())
                 {
                 //Add it      
-                $id = count($bugs);
-                $bugs[$id]['id'] = $id;    
-                $bugs[$id]['version'] = htmlspecialchars(stripslashes($_REQUEST['version']));
-                $bugs[$id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['severity']));
-                $bugs[$id]['status'] = "New";
-                $bugs[$id]['description'] = htmlspecialchars(stripslashes($_REQUEST['description']));
-                $bugs[$id]['resolution'] = '';
+                $bug_id = count($bugs);
+                $bugs[$bug_id]['id'] = $bug_id;    
+                $bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['version']));
+                $bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['severity']));
+                $bugs[$bug_id]['status'] = "New";
+                $bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['description']));
+                $bugs[$bug_id]['resolution'] = '';
                 //Ecriture en pseudo db
                 $fh = fopen($pfile, 'w');
                 fwrite($fh, serialize($bugs));
                 fclose($fh);
-                $resumed_enter = 'Your report have been successfully stored as bug#'.$id;
-                $this->_emailForNewBug($id,$data['project'],$bugs[$id]['version'],$bugs[$id]['severity'],$bugs[$id]['description']);
+                $resumed_enter = 'Your report have been successfully stored as bug#'.$bug_id;
+                $this->_emailForNewBug($bug_id,$data['project'],$bugs[$bug_id]['version'],$bugs[$bug_id]['severity'],$bugs[$bug_id]['description']);
+                $_REQUEST['description'] = '';
                 }
             }
       else
@@ -211,8 +212,8 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
     {
         if ($this->getConf('send_email')==1)
         {
-            $body='A new bug have entered in the project : '.$project.' (id : '.$id.")\n\n".'Version : '.$version.' ('.$severity.") :\n".$description;
-            $subject='A new bug have entered in the project : '.$project.'Version :'.$version.' ('.$severity.') : '.$id;
+            $body='A new bug have entered in the project : '.$project.' (id : '.$id.")\n\n".' Version : '.$version.' ('.$severity.") :\n".$description;
+            $subject='A new bug have entered in the project : '.$project.' Version :'.$version.' ('.$severity.') : '.$id;
             $from=$this->getConf('address_email') ;
             $to=$from;
             mail_send($to, $subject, $body, $from, $cc='', $bcc='', $headers=null, $params=null);
