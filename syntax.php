@@ -127,8 +127,10 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
             {
             if (checkSecurityToken())
                 {
-                //Add it      
-                $bug_id = count($bugs);
+                //Add it
+                $bug_id=count($bugs);      
+                foreach ($bugs as $value)
+                    {if ($value['id'] >= $bug_id) {$bug_id=$value['id'] + 1;}}
                 $bugs[$bug_id]['id'] = $bug_id;    
                 $bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['version']));
                 $bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['severity']));
@@ -238,19 +240,20 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 					'<col id="col1_6"></col>'.
 			   '</colgroup>'.
 			   '<thead><tr class="row0"><td class="col0">Id</td><td class="col1">Status</td><td class="col2">Severity</td><td class="col3">Version</td><td class="col4">Description</td><td class="col5">Resolution</td></tr></thead><tbody>';
-		for ($i = 0; $i <= $total; $i++)
+//		for ($i = 0; $i <= $total; $i++)
+        foreach ($bugs as $bug)
 			{
-			if ($bugs[$i]['status'])
+			if ($bug['status'])
 				{
-				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bugs[$i]['status'])))))
+				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bug['status'])))))
 					{
 					$ret .= '<tr class="row'.($i+1).'">'.
-					'<td class="col0">'.$bugs[$i]['id'].'</td>'.
-					'<td class="col1">'.$bugs[$i]['status'].'</td>'.
-					'<td class="col2">'.$bugs[$i]['severity'].'</td>'.
-					'<td class="col3">'.$bugs[$i]['version'].'</td>'.
-					'<td class="col4">'.$bugs[$i]['description'].'</td>'.
-					'<td class="col5">'.$bugs[$i]['resolution'].'</td>'.
+					'<td class="col0">'.$bug['id'].'</td>'.
+					'<td class="col1">'.$bug['status'].'</td>'.
+					'<td class="col2">'.$bug['severity'].'</td>'.
+					'<td class="col3">'.$bug['version'].'</td>'.
+					'<td class="col4">'.$bug['description'].'</td>'.
+					'<td class="col5">'.$bug['resolution'].'</td>'.
 					'</tr>';
 					}
 				}
@@ -276,11 +279,12 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
         if ((auth_quickaclcheck($ID) >= AUTH_ADMIN))            
                {$ret .= '<td class="col7"></td>';}               
         $ref .= '</tr></thead><tbody>';
-		for ($i = 0; $i <= $total; $i++){
+//		for ($i = 0; $i <= $total; $i++){
+		foreach ($bugs as $bug){
 		
-			if ($bugs[$i]['status'])
+			if ($bug['status'])
 			{
-				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bugs[$i]['status'])))))
+				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bug['status'])))))
 				{
 					
 					$ret .= '<tr class="row'.($i+1).'">'.
@@ -288,15 +292,15 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
 					'<input type="hidden" name="do" value="show" />'.
 					'<input type="hidden" name="id" value="'.$ID.'" />'.
 					'<input type="hidden" name="admin_edit" value="yes" />'.
-					'<input type="hidden" name="edit_id" value="'.$bugs[$i]['id'].'" />'.
+					'<input type="hidden" name="edit_id" value="'.$bug['id'].'" />'.
 					formSecurityToken(false).
 					
-					'<td class="col0">'.$bugs[$i]['id'].'</td>'.
-					'<td class="col1">'.'<input id="dokumicrobugtracker__option" name="edit_status" type="text" maxlength="64" value="'.$bugs[$i]['status'].'"/>'.'</td>'.
-					'<td class="col2">'.'<input id="dokumicrobugtracker__option" name="edit_severity" type="text" maxlength="64" value="'.$bugs[$i]['severity'].'"/>'.'</td>'.
-					'<td class="col3">'.'<input id="dokumicrobugtracker__option" name="edit_version" type="text" maxlength="64" value="'.$bugs[$i]['version'].'"/>'.'</td>'.
-					'<td class="col4">'.'<textarea id="dokumicrobugtracker__option" cols=30 rows=8 name="edit_description" type="text"/>'.$bugs[$i]['description'].'</textarea></td>'.
-					'<td class="col5">'.'<input id="dokumicrobugtracker__option" name="edit_resolution" type="text" maxlength="64" value="'.$bugs[$i]['resolution'].'"/>'.'</td>'.
+					'<td class="col0">'.$bug['id'].'</td>'.
+					'<td class="col1">'.'<input id="dokumicrobugtracker__option" name="edit_status" type="text" maxlength="64" value="'.$bug['status'].'"/>'.'</td>'.
+					'<td class="col2">'.'<input id="dokumicrobugtracker__option" name="edit_severity" type="text" maxlength="64" value="'.$bug['severity'].'"/>'.'</td>'.
+					'<td class="col3">'.'<input id="dokumicrobugtracker__option" name="edit_version" type="text" maxlength="64" value="'.$bug['version'].'"/>'.'</td>'.
+					'<td class="col4">'.'<textarea id="dokumicrobugtracker__option" cols=30 rows=8 name="edit_description" type="text"/>'.$bug['description'].'</textarea></td>'.
+					'<td class="col5">'.'<input id="dokumicrobugtracker__option" name="edit_resolution" type="text" maxlength="64" value="'.$bug['resolution'].'"/>'.'</td>'.
 					'<td class="col6">'.'<input class="button" type="submit" value="Save">'.'</td>'.
    					'</form>';
                     if ((auth_quickaclcheck($ID) >= AUTH_ADMIN))            
@@ -305,7 +309,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
                         formSecurityToken(false).
                         '<input type="hidden" name="id" value="'.$ID.'" />'.
                         '<input type="hidden" name="admin_edit" value="delete" />'.
-                        '<input type="hidden" name="edit_id" value="'.$bugs[$i]['id'].'" />'.
+                        '<input type="hidden" name="edit_id" value="'.$bug['id'].'" />'.
                         '<td class="col7"><input class="button" type="submit" value="Delete"></td></form>';
                         }
 
