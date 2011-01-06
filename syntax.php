@@ -1,216 +1,241 @@
 <?php
 /**
- * DokuMicroBugTracker Plugin: allows to create simple bugtracker
- *
- * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
- * @author     Benoît HERVIER <khertan@khertan.net>  
- */
- 
+* DokuMicroBugTracker Plugin: allows to create simple bugtracker
+*
+* @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
+* @author     Benoît HERVIER <khertan@khertan.net>  
+*/
 //session_start();
- 
 if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 require_once(DOKU_PLUGIN.'syntax.php');
-
-/**
- * All DokuWiki plugins to extend the parser/rendering mechanism
- * need to inherit from this class
- */
-class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
-  
-  /**
-   * return some info
-   */
-  function getInfo(){
-    return confToHash(dirname(__FILE__).'/INFO');
-  }
-
-  function getType(){ return 'substition';}
-  function getPType(){ return 'block';}
-  function getSort(){ return 167; }
-//      function getSort() { return 314; }
-  
-  /**
-   * Connect pattern to lexer
-   */
-  function connectTo($mode){
-    $this->Lexer->addSpecialPattern('\{\{dokumicrobugtracker>[^}]*\}\}',$mode,'plugin_dokumicrobugtracker');
+//require_once('FirePHPCore/FirePHP.class.php');
     
-/*    $this->Lexer->addSpecialPattern('{dokumicrobugtracker.*?>.+?</dokumicrobugtracker>', $mode, 'plugin_dokumicrobugtracker'); */
-  }
+/**
+* All DokuWiki plugins to extend the parser/rendering mechanism
+* need to inherit from this class
+*/
+class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin 
+{
+    /**
+    * return some info
+    */
+    function getInfo(){
+        return confToHash(dirname(__FILE__).'/INFO');
+    }
 
-  /**
-   * Handle the match
-   */
+    function getType(){ return 'substition';}
+    function getPType(){ return 'block';}
+    function getSort(){ return 167;}
+    /**
+    * Connect pattern to lexer
+    */
+    function connectTo($mode){
+        $this->Lexer->addSpecialPattern('\{\{dokumicrobugtracker>[^}]*\}\}',$mode,'plugin_dokumicrobugtracker');
+    }
+    /**
+    * Handle the match
+    */
     function handle($match, $state, $pos, &$handler){
         $match = substr($match,22,-2); //strip markup from start and end
-
-        $data = array();
-
         //handle params
+        $data = array();
         $params = explode('|',$match,3);
-        foreach($params as $param){
+        
+        //Default Value
+        $data['display'] = 'ALL';
+        $data['status'] = 'ALL';
+        
+        foreach($params as $param){            
             $splitparam = explode('=',$param);
-            if ($splitparam[0]=='project'){$data['project'] = $splitparam[1];}
-            else {if ($splitparam[0]=='status'){$data['status'] = $splitparam[1];}
-			else {if ($splitparam[0]=='display'){$data['display'] = $splitparam[1];}
-            // DO NOT USE THAT IT S TO UNSECURE : else {$data[$splitparam[0]] = $splitparam[1];}
-            }}
-            }
+            if ($splitparam[1] != '')
+                {
+                if ($splitparam[0]=='project')
+                	{$data['project'] = $splitparam[1];
+                    /*continue;*/}
+
+                if ($splitparam[0]=='status')
+                	{$data['status'] = strtoupper($splitparam[1]);
+                    /*continue;*/}
+                
+                if ($splitparam[0]=='display')
+                	{$data['display'] = strtoupper($splitparam[1]);
+                    /*continue;*/}                                   
+                }
+        }
         return $data;
     }
-
-
-  /**
-   * Create output
-   */
-  function render($mode, &$renderer, $data) {
-  
-    if ($mode == 'xhtml'){
-      global $ID;
-      
-      $renderer->info['cache'] = false;
-
-      /*print 'test:'.$data.'<br>suite<br>';
-      foreach ($data as $key=>$value)
-        {print ':'.$key.'=>'.$value.':'.$data[$key].'<br>';}*/
-        
-      if (!($data['status'])) {$data['status']='ALL';}
-	  
-      // prevent caching to ensure the list are fresh
-
+    
+    /**
+    * Create output
+    */
+    function render($mode, &$renderer, $data) {        
+        global $ID;
+        if ($mode == 'xhtml'){
             
-      // get bugs file contents
-      $pfile = metaFN(md5($data['project']), '.bugs');
-	  if (@file_exists($pfile)) {
-		$bugs  = unserialize(@file_get_contents($pfile));}
-	  else {$bugs = array();}
-      
-	  //print $bugs[0]['version'];
-      //$more = trim(array_shift($options));      
+            $renderer->info['cache'] = false;     
+   
+            //$renderer->doc .= '<h1>Bug tracker is currently broken : i m working on it.</h1>';
+            
+            // get bugs file contents
+            $pfile = metaFN(md5($data['project']), '.bugs');            
+            if (@file_exists($pfile))
+            	{$bugs  = unserialize(@file_get_contents($pfile));}
+            else
+            	{$bugs = array();}	          
 
-      
-	  if (($_REQUEST['admin_edit']=='yes') && (auth_quickaclcheck($ID) >= AUTH_EDIT))
-	  {
-		if (checkSecurityToken())
-		{
-			$bug_id = (int) $_REQUEST['edit_id'];
-			$bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['edit_version']));
-			$bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['edit_severity']));
-			$bugs[$bug_id]['status'] = htmlspecialchars(stripslashes($_REQUEST['edit_status']));
-			$bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['edit_description']));
-			$bugs[$bug_id]['resolution'] = htmlspecialchars(stripslashes($_REQUEST['edit_resolution']));
-			//Ecriture en pseudo db
-			$fh = fopen($pfile, 'w');
-			fwrite($fh, serialize($bugs));
-			fclose($fh);
-		}
-	  }
-
-	  if (($_REQUEST['admin_edit']=='delete') && (auth_quickaclcheck($ID) >= AUTH_ADMIN))
-	  {
-		if (checkSecurityToken())
-		{
-			$bug_id = (int) $_REQUEST['edit_id'];
-			unset($bugs[$bug_id]);
-			$fh = fopen($pfile, 'w');
-			fwrite($fh, serialize($bugs));
-			fclose($fh);
-		}
-	  }
-	  
-      //If it s a usr report add it to the pseudo db
-      
-      if (($_REQUEST['captcha']) || ($_REQUEST['severity']))
-      {
-          if ((($_REQUEST['captcha']==$_SESSION['security_number'])||($this->getConf('use_captcha')==0)) && ($_REQUEST['admin_edit']!='yes') && (($data['display']=='form') || (!($data['display']))))
+            //If it s a usr report add it to the pseudo db
+            $Generated_Header = '';
+            if (($_REQUEST['captcha']) || ($_REQUEST['severity']))
+              {
+                  if (($_REQUEST['captcha']==$_SESSION['security_number']) || ($this->getConf('use_captcha')==0))
+                    {
+                    if (checkSecurityToken())
+                        {
+                        //Add it
+                        $bug_id=count($bugs);      
+                        foreach ($bugs as $value)
+                            {if ($value['id'] >= $bug_id) {$bug_id=$value['id'] + 1;}}
+                        $bugs[$bug_id]['id'] = $bug_id;    
+                        $bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['version']));
+                        $bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['severity']));
+                        $bugs[$bug_id]['status'] = "New";
+                        $bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['description']));
+                        $bugs[$bug_id]['resolution'] = '';
+                        //Ecriture en pseudo db
+                        $fh = fopen($pfile, 'w');
+                        fwrite($fh, serialize($bugs));
+                        fclose($fh);
+                        $Generated_Header = '<div style="border: 3px green solid; background-color: lightgreen; margin: 10px; padding: 10px;">Your report have been successfully stored as bug#'.$bug_id.'</div>';
+                        $this->_emailForNewBug($bug_id,$data['project'],$bugs[$bug_id]['version'],$bugs[$bug_id]['severity'],$bugs[$bug_id]['description']);
+                        $_REQUEST['description'] = '';
+                        }
+                    }
+              else
+                    {
+                    $Generated_Header = $_SESSION['security_number'].':<div class ="important">Wrong answer to the antispam question.</div> :'.$_REQUEST['captcha'];
+                    }  
+              }            
+            
+            $Generated_Table = '';
+            $Generated_Scripts = '';
+            $Generated_Report = '';
+            
+            // Creation de la table            
+            if (($data['display']=='BUGS') || ($data['display']=='ALL'))
             {
-            if (checkSecurityToken())
-                {
-                //Add it
-                $bug_id=count($bugs);      
-                foreach ($bugs as $value)
-                    {if ($value['id'] >= $bug_id) {$bug_id=$value['id'] + 1;}}
-                $bugs[$bug_id]['id'] = $bug_id;    
-                $bugs[$bug_id]['version'] = htmlspecialchars(stripslashes($_REQUEST['version']));
-                $bugs[$bug_id]['severity'] = htmlspecialchars(stripslashes($_REQUEST['severity']));
-                $bugs[$bug_id]['status'] = "New";
-                $bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['description']));
-                $bugs[$bug_id]['resolution'] = '';
-                //Ecriture en pseudo db
-                $fh = fopen($pfile, 'w');
-                fwrite($fh, serialize($bugs));
-                fclose($fh);
-                $resumed_enter = 'Your report have been successfully stored as bug#'.$bug_id;
-                $this->_emailForNewBug($bug_id,$data['project'],$bugs[$bug_id]['version'],$bugs[$bug_id]['severity'],$bugs[$bug_id]['description']);
-                $_REQUEST['description'] = '';
-                }
+                $Generated_Table = $this->_table_render($bugs,$data); 
+                $Generated_Scripts = $this->_scripts_render();
             }
-      else
+
+            // Count only ...        
+            if ($data['display']=='COUNT') 
             {
-            $resumed_enter = $_SESSION['security_number'].':Wrong answer to the antispam question.';
-            }  
-      }
- 
-      
-	  
-      //If no display option show all
-	  if (!($data['display']))
-		{
-		// display title
-		$renderer->doc .= '<fieldset class="dokumicrobugtracker">'.
-        '<legend>'.$data['project'].'</legend>';
-		
-		//Show current bugs
-		$renderer->doc .= $this->_showBugs($data['project'],$bugs,$data['status']);
-		//Show Form			
-	    $renderer->doc .= $this->_showReportForm($renderer);
-		if ($resumed_enter)
-			{$renderer->doc .= $this->_show_message($resumed_enter);}
-//        else if ($_REQUEST['secure']==$_SESSION['security_number']) {{$renderer->doc .= $this->_show_message('<br>Wrong Answer to the security question<br/>');}}
-
-		$renderer->doc .= '</fieldset>';
-		}
-	  else 
-		{ 
-		if ($data['display']=='form') 
-			{
-			// display title
-			$renderer->doc .= '<fieldset class="dokumicrobugtracker">'.
-			'<legend>'.$data['project'].'</legend>';
-		
-			//Show Form
-	        $renderer->doc .= $this->_showReportForm($renderer);
-            if ($resumed_enter)
-                {$renderer->doc .= $this->_show_message($resumed_enter);}
- //           else if ($_REQUEST['secure']==$_SESSION['security_number']) {{$renderer->doc .= $this->_show_message('<br>Wrong Answer to the security question<br/>');}}
-            
-			$renderer->doc .= '</fieldset>';
-			} 
-		else 
-			{
-			if ($data['display']=='bugs') 
-				{
-				// display title
-				$renderer->doc .= '<fieldset class="dokumicrobugtracker">'.
-				'<legend>'.$data['project'].'</legend>';
-		
-				//Show current bugs
-				$renderer->doc .= $this->_showBugs($data['project'],$bugs,$data['status']);
-				
-				 $renderer->doc .= '</fieldset>';
-				}
-			}
-		}
-      
-     
-          
-      return true;
+                $Generated_Table = $this->_count_render($bugs);                
+            }            
+            // Generation du form
+            if (($data['display']=='FORM') || ($data['display']=='ALL'))
+            {$Generated_Report = $this->_report_render();}
+                        
+            // Render            
+            $renderer->doc .= $Generated_Header.$Generated_Table.$Generated_Scripts.$Generated_Report;
+        }
     }
-    return false;
-  }
 
-  function _emailForNewBug($id,$project,$version,$severity,$description)
+    function _count_render($bugs)
+    {
+        $count = array();
+        foreach ($bugs as $bug)
+        {
+            $status = $this->_get_one_value($bug,'status');
+            if ($status != '')
+                if ($this->_get_one_value($count,$status)=='')
+                    {$count[$status] = array(1,$status);}
+                else
+                    {$count[$status][0] += 1;}                                
+        }
+        $rendered_count = '<ul>';
+        foreach ($count as $value)
+        {
+            $rendered_count .= '<li>'.$value[1].' : '.$value[0].'</li>';
+        }
+        $rendered_count .= '</ul>';
+        return $rendered_count;
+    }
+    
+    function _scripts_render()
+    {
+        $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
+        return    "<script type=\"text/javascript\" src=\"".$BASE."prototype.js\"></script>        <script type=\"text/javascript\" src=\"".$BASE."fabtabulous.js\"></script>
+        <script type=\"text/javascript\" src=\"".$BASE."tablekit.js\"></script>
+        <script type=\"text/javascript\">
+            TableKit.Sortable.addSortType(new TableKit.Sortable.Type('status', {                    editAjaxURI : '".$BASE."edit.php',                    ajaxURI : '".$BASE."edit.php',
+                    pattern : /^[New|In Progress|Closed]$/,
+                    normal : function(v) {
+                        var val = 3;
+                        switch(v) {
+                            case 'New':
+                                val = 0;
+                                break; 
+                            case 'Closed':
+                                val = 2;
+                                break;
+                            default:
+                                val = 1;
+                                break;
+                        }
+                        return val;
+                    }
+                }
+            ));
+            TableKit.options.editAjaxURI = '".$BASE."edit.php';
+            TableKit.Editable.multiLineInput('Description');
+            var _tabs = new Fabtabs('tabs');
+            $$('a.next-tab').each(function(a) {
+                Event.observe(a, 'click', function(e){
+                    Event.stop(e);
+                    var t = $(this.href.match(/#(\w.+)/)[1]+'-tab');
+                    _tabs.show(t);
+                    _tabs.menu.without(t).each(_tabs.hide.bind(_tabs));
+                }.bindAsEventListener(a));
+            });
+        </script>";
+    }
+
+    function _table_render($bugs,$data)
+    {
+        global $ID;
+        if (auth_quickaclcheck($ID) >= AUTH_ADMIN)        
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable\"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        } 
+        else       
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable\"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
+        
+        $body = "<tbody>";
+        foreach ($bugs as $bug)
+        {
+            if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status']))
+            {
+                $body .= '<tr id = "'.$data['project'].''.$this->_get_one_value($bug,'id').'">'.
+                '<td>'.$this->_get_one_value($bug,'id').'</td>'.
+                '<td>'.$this->_get_one_value($bug,'status').'</td>'.
+                '<td>'.$this->_get_one_value($bug,'severity').'</td>'.
+                '<td>'.$this->_get_one_value($bug,'version').'</td>'.
+                '<td class="canbreak">'.$this->_get_one_value($bug,'description').'</td>'.
+                '<td>'.$this->_get_one_value($bug,'resolution').'</td>'. 
+                '</tr>';        
+            }
+        }
+        $body .= '</tbody></table><div>';        
+        return $head.$body;
+    }
+
+    function _get_one_value($bug, $key) {
+        if (array_key_exists($key,$bug))
+            return $bug[$key];
+        return '';
+    }
+
+    function _emailForNewBug($id,$project,$version,$severity,$description)
     {
         if ($this->getConf('send_email')==1)
         {
@@ -221,140 +246,40 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin {
             mail_send($to, $subject, $body, $from, $cc='', $bcc='', $headers=null, $params=null);
         }
     }
-  
-  function _showBugs($project,$bugs,$status){
-    GLOBAL $ID;
-	
-    $total = count($bugs);
-    if ($total == 0) return '';
-	
-	if (!(auth_quickaclcheck($ID) >= AUTH_EDIT))
-		{
-	    $ret = '<table id="sortableTable.'.$project.'.'.$status.'" class="inline" style="margin-left: auto;margin-right: auto;">'.
-			   '<colgroup>'.
-					'<col id="col1_1"></col>'.
-					'<col id="col1_2"></col>'.
-					'<col id="col1_3"></col>'.
-					'<col id="col1_4"></col>'.
-					'<col id="col1_5"></col>'.
-					'<col id="col1_6"></col>'.
-			   '</colgroup>'.
-			   '<thead><tr class="row0"><td class="col0">Id</td><td class="col1">Status</td><td class="col2">Severity</td><td class="col3">Version</td><td class="col4">Description</td><td class="col5">Resolution</td></tr></thead><tbody>';
-//		for ($i = 0; $i <= $total; $i++)
-        foreach ($bugs as $bug)
-			{
-			if ($bug['status'])
-				{
-				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bug['status'])))))
-					{
-					$ret .= '<tr class="row'.($i+1).'">'.
-					'<td class="col0">'.$bug['id'].'</td>'.
-					'<td class="col1">'.$bug['status'].'</td>'.
-					'<td class="col2">'.$bug['severity'].'</td>'.
-					'<td class="col3">'.$bug['version'].'</td>'.
-					'<td class="col4">'.$bug['description'].'</td>'.
-					'<td class="col5">'.$bug['resolution'].'</td>'.
-					'</tr>';
-					}
-				}
-			}
-		$ret .= '</tbody></table><script type="text/javascript">initSortTable("sortableTable.'.$project.'.'.$status.'",Array(\'N\',\'S\',\'S\',\'N\',\'S\',\'S\'));</script>';
-		}
-	else
-		{	
-	    $ret = '<table id="sortableTable.'.$project.'.'.$status.'" class="inline" style="margin-left: auto;margin-right: auto;">'.
-			   '<colgroup>'.
-					'<col id="col1_1"></col>'.
-					'<col id="col1_2"></col>'.
-					'<col id="col1_3"></col>'.
-					'<col id="col1_4"></col>'.
-					'<col id="col1_5"></col>'.
-					'<col id="col1_6"></col>';
-                    '<col id="col1_7"></col>';
-        if ((auth_quickaclcheck($ID) >= AUTH_ADMIN))            
-            {$ret .= '<col id="col1_8"></col>';}
-            
-        $ret .= '</colgroup>'.
-			   '<thead><tr class="row0"><td class="col0">Id</td><td class="col1">Status</td><td class="col2">Severity</td><td class="col3">Version</td><td class="col4">Description</td><td class="col5">Resolution</td><td class="col6"></td>';
-        if ((auth_quickaclcheck($ID) >= AUTH_ADMIN))            
-               {$ret .= '<td class="col7"></td>';}               
-        $ref .= '</tr></thead><tbody>';
-//		for ($i = 0; $i <= $total; $i++){
-		foreach ($bugs as $bug){
-		
-			if ($bug['status'])
-			{
-				if ((strtoupper($status)=='ALL') || (is_numeric(strpos(strtoupper($status),strtoupper($bug['status'])))))
-				{
-					
-					$ret .= '<tr class="row'.($i+1).'">'.
-					'<form id="dokumicrobugtracker__form" method="post" action="'.script().'" accept-charset="'.$lang['encoding'].'">'.
-					'<input type="hidden" name="do" value="show" />'.
-					'<input type="hidden" name="id" value="'.$ID.'" />'.
-					'<input type="hidden" name="admin_edit" value="yes" />'.
-					'<input type="hidden" name="edit_id" value="'.$bug['id'].'" />'.
-					formSecurityToken(false).
-					
-					'<td class="col0">'.$bug['id'].'</td>'.
-					'<td class="col1">'.'<input id="dokumicrobugtracker__option" name="edit_status" type="text" maxlength="64" value="'.$bug['status'].'"/>'.'</td>'.
-					'<td class="col2">'.'<input id="dokumicrobugtracker__option" name="edit_severity" type="text" maxlength="64" value="'.$bug['severity'].'"/>'.'</td>'.
-					'<td class="col3">'.'<input id="dokumicrobugtracker__option" name="edit_version" type="text" maxlength="64" value="'.$bug['version'].'"/>'.'</td>'.
-					'<td class="col4">'.'<textarea id="dokumicrobugtracker__option" cols=30 rows=8 name="edit_description" type="text"/>'.$bug['description'].'</textarea></td>'.
-					'<td class="col5">'.'<input id="dokumicrobugtracker__option" name="edit_resolution" type="text" maxlength="64" value="'.$bug['resolution'].'"/>'.'</td>'.
-					'<td class="col6">'.'<input class="button" type="submit" value="Save">'.'</td>'.
-   					'</form>';
-                    if ((auth_quickaclcheck($ID) >= AUTH_ADMIN))            
-                        {$ret .= '<form id="dokumicrobugtracker__form" method="post" action="'.script().'" accept-charset="'.$lang['encoding'].'">'.
-                        '<input type="hidden" name="do" value="show" />'.
-                        formSecurityToken(false).
-                        '<input type="hidden" name="id" value="'.$ID.'" />'.
-                        '<input type="hidden" name="admin_edit" value="delete" />'.
-                        '<input type="hidden" name="edit_id" value="'.$bug['id'].'" />'.
-                        '<td class="col7"><input class="button" type="submit" value="Delete"></td></form>';
-                        }
 
-					$ref .= '</tr>';
-				}
-			}
-		}
-		$ret .= '</tbody></table><script type="text/javascript">initSortTable("sortableTable.'.$project.'.'.$status.'",Array(\'N\',\'S\',\'S\',\'N\',\'S\',\'S\'));</script>';
+   function _report_render()
+    {
+        global $lang;
+        global $ID;
+
+        $ret = '<br /><h5>Report a new bug</h5><br /><form class="dokumicrobugtracker__form" method="post" action="'.script().'" accept-charset="'.$lang['encoding'].'"><p>';
+        $ret .= formSecurityToken(false).
+        '<input type="hidden" name="do" value="show" />'.
+        '<input type="hidden" name="id" value="'.$ID.'" />'.
+        '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/></p>'.
+        '<p><label> Severity : </label>'.
+        '  <select class="element select small dokumicrobugtracker__option" name="severity">'.
+        '       <option value="Minor Bug" >Minor Bug</option>'.
+        '       <option value="Feature Request" >Feature Request</option>'.
+        '       <option value="Major Bug" >Major Bug</option>'.
+        '	 </select></p>'.      
+        '<p><label> Description : </label><br /><textarea class="dokumicrobugtracker__option" name="description">'.$_REQUEST['description'].'</textarea></p>';
+
+        if ($this->getConf('use_captcha')==1)  
+            $ret .= '<p><img src="'.DOKU_BASE.'lib/plugins/dokumicrobugtracker/image.php" alt="captcha" /><label>what s the result? </label><input class="dokumicrobugtracker__option" name="captcha" type="text" maxlength="3" value=""/></p>';      
+
+
+        $ret .= '<p><input class="button" type="submit" '.
+        'value="Report" /></p>'.
+        '</form>';
+
+        return $ret;    
     }
-	
-    return $ret;
-  }
-    
-  function _showReportForm(&$renderer){
-    global $lang;
-    global $ID;
-	
-    $i = 0;
-    $ret = '<br><h5>Report a new bug</h5><br><form id="dokumicrobugtracker__form" method="post" action="'.script().'" accept-charset="'.$lang['encoding'].'"><div class="no">';
-	$ret .= formSecurityToken(false).
-      '<input type="hidden" name="do" value="show" />'.
-      '<input type="hidden" name="id" value="'.$ID.'" />'.
-      '<span><label> Version : </label><input id="dokumicrobugtracker__option" name="version" type="text" maxlength="64" value="'.$_REQUEST['version'].'"/></span>'.
-      '<span><label> Severity : </label>'.
-      '  <select class="element select small" id="dokumicrobugtracker__option" name="severity">'.
-      '       <option value="Minor Bug" >Minor Bug</option>'.
-      '       <option value="Feature Request" >Feature Request</option>'.
-      '       <option value="Major Bug" >Major Bug</option>'.
-	  '	 </select></span>'.      
-      '<br><label> Description : </label><br /><textarea id="dokumicrobugtracker__option" name="description" cols=80 rows=6 type="text"/>'.$_REQUEST['description'].'</textarea><br />';
-    if ($this->getConf('use_captcha')==1)  
-     $ret .= '<span><img src="'.DOKU_BASE.'lib/plugins/dokumicrobugtracker/image.php"><label>what s the result? </label><input id="dokumicrobugtracker__option" name="captcha" type="text" maxlength="3" value=""/></span>';      
 
-    $ret .= '<input class="button" type="submit" '.
-      'value="Report" />'.
-      '</div></form>';
-				
-    return $ret;
-  }  
-  
-  function _show_message($string){
-		return "<script type='text/javascript'>
-			alert('$string');
-		</script>";
-	}
+    function _show_message($string){
+        return "<script type='text/javascript'>
+            alert('$string');
+        </script>";
+    }
 }
- 
-//Setup VIM: ex: et ts=4 enc=utf-8 :
+?>
