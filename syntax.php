@@ -215,7 +215,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         {
             if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status']))
             {
-                $body .= '<tr id = "'.$data['project'].''.$this->_get_one_value($bug,'id').'">'.
+                $body .= '<tr id = "'.$data['project'].' '.$this->_get_one_value($bug,'id').'">'.
                 '<td>'.$this->_get_one_value($bug,'id').'</td>'.
                 '<td>'.$this->_get_one_value($bug,'status').'</td>'.
                 '<td>'.$this->_get_one_value($bug,'severity').'</td>'.
@@ -252,7 +252,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         global $lang;
         global $ID;
 
-        $ret = '<br /><h5>Report a new bug</h5><br /><form class="dokumicrobugtracker__form" method="post" action="'.script().'" accept-charset="'.$lang['encoding'].'"><p>';
+        $ret = '<br /><h5>Report a new bug</h5><br /><form class="dokumicrobugtracker__form" method="post" action="'.$_SERVER['REQUEST_URI'].'" accept-charset="'.$lang['encoding'].'"><p>';
         $ret .= formSecurityToken(false).
         '<input type="hidden" name="do" value="show" />'.
         '<input type="hidden" name="id" value="'.$ID.'" />'.
