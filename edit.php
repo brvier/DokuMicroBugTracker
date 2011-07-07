@@ -19,14 +19,14 @@ require_once(realpath(dirname(__FILE__)).'/../../../inc/init.php');
 //    * &value=xxxxxx: The rest of the POST body is the serialised form. The default name of the field is 'value'.
 
 global $ID;
-
+function metaFN1($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
 
 $exploded = explode(' ',htmlspecialchars(stripslashes($_POST['id'])));
 $project = $exploded[0];
 $id_bug = intval($exploded[1]);
 
 // get bugs file contents
-$pfile = metaFN(md5($project), '.bugs');
+$pfile = metaFN1(md5($project), '.bugs');
 if (@file_exists($pfile))
     {$bugs  = unserialize(@file_get_contents($pfile));}
 else 
@@ -40,9 +40,9 @@ $value = htmlspecialchars(stripslashes($_POST['value']));
 //echo $_POST;
 //print_r($_POST);
 
-if (($field == 'status') || ($field == 'severity') || ($field == 'version') || ($field == 'description')|| ($field == 'resolution') && (auth_isadmin()==1))
-    {
-    $bugs[$id_bug][$field]=$value;
+if (($field == 'status') || ($field == 'severity') || ($field == 'version') || ($field == 'description')|| ($field == 'resolution') || ($field == 'delete') && (auth_isadmin()==1))
+    {	if ($field == 'delete')		{unset($arr):}	else
+		{$bugs[$id_bug][$field]=$value;}
 //    echo $id_bug;
 //    echo $pfile;
     }

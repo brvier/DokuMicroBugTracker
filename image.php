@@ -30,17 +30,17 @@
 	// maximum font size
 	$max_font_size = 18;
 	// rotation angle
-	$angle = 20;
+	$angle = 98;
 	// background grid size
-	$bg_size = 13;
+	$bg_size = 6;
 	// path to font - needed to display the operation elements
 	$font_path = 'fonts/courbd.ttf';
 	// array of possible operators
 	$operators=array('+','-','*');
 	// first number random value; keep it lower than $second_num
-	$first_num = rand(1,5);
+	$first_num = rand(1,9);
 	// second number random value
-	$second_num = rand(6,11);
+	$second_num = rand(10,24);
 		
 	/*===============================================================
 		From here on you may leave the code intact unless you want
