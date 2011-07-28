@@ -10,7 +10,7 @@ if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../')
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 require_once(DOKU_PLUGIN.'syntax.php');
 function metaFN1($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
- 
+
 /**
 * All DokuWiki plugins to extend the parser/rendering mechanism
 * need to inherit from this class
@@ -28,6 +28,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
     function getPType(){ return 'block';}
     function getSort(){ return 167;}
     /**
+  
     * Connect pattern to lexer
     */
     function connectTo($mode){
@@ -63,6 +64,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                     /*continue;*/}                                   
                 }
         }
+        
 		return $data;
 		}
     
@@ -86,8 +88,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         global $ID;
 		if ($mode == 'xhtml'){
 
-            $renderer->info['cache'] = false;     
-            //$renderer->doc .= '<h1>Bug tracker is currently broken : i m working on it.</h1>';
+            $renderer->info['cache'] = false;
             
             // get bugs file contents
             $pfile = metaFN1(md5($data['project']), '.bugs');            
@@ -104,7 +105,19 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 				if (isset($_REQUEST['severity'])) {
 					if ($_REQUEST['severity'])
 					{
-						if ($this->_captcha_ok())
+					    if ($_REQUEST['version']== '')
+					    {
+					        $Generated_Header = '<div class ="error">Please enter a version number.</div>';
+					    }
+					    elseif ($_REQUEST['description']== '')
+					    {
+					        $Generated_Header = '<div class ="error">Please enter a description.</div>';
+					    }
+					    elseif (!$this->_captcha_ok())
+					    {
+					        $Generated_Header = '<div class ="error">Wrong answer to the antispam question.</div>';
+					    }					    
+						else
 						{
 							if (checkSecurityToken())
 							{
@@ -118,6 +131,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 								$bugs[$bug_id]['status'] = "New";
 								$bugs[$bug_id]['description'] = htmlspecialchars(stripslashes($_REQUEST['description']));
 								$bugs[$bug_id]['resolution'] = '';
+								$bugs[$bug_id]['author'] = htmlspecialchars(stripslashes($_REQUEST['email']));
 								//Ecriture en pseudo db
 								$fh = fopen($pfile, 'w');
 								fwrite($fh, serialize($bugs));
@@ -126,10 +140,6 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 								$this->_emailForNewBug($bug_id,$data['project'],$bugs[$bug_id]['version'],$bugs[$bug_id]['severity'],$bugs[$bug_id]['description']);
 								$_REQUEST['description'] = '';
 							}
-						}
-						else
-						{
-							$Generated_Header = '<div class ="important">Wrong answer to the antispam question.</div>';
 						}
 					}
 				}
@@ -166,7 +176,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         {
             $status = $this->_get_one_value($bug,'status');
             if ($status != '')
-                if ($this->_get_one_value($count,$status)=='')
+                    if ($this->_get_one_value($count,$status)=='')
                     {$count[$status] = array(1,$status);}
                 else
                     {$count[$status][0] += 1;}                                
@@ -217,7 +227,8 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                     var t = $(this.href.match(/#(\w.+)/)[1]+'-tab');
                     _tabs.show(t);
                     _tabs.menu.without(t).each(_tabs.hide.bind(_tabs));
-                }.bindAsEventListener(a));
+
+                    }.bindAsEventListener(a));
             });
         </script>";
     }
@@ -280,13 +291,15 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         $ret .= formSecurityToken(false).
         '<input type="hidden" name="do" value="show" />'.
         '<input type="hidden" name="id" value="'.$ID.'" />'.
-        '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/></p>'.
+        '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/>'.
+        '<label> Email : </label><input class="dokumicrobugtracker__option" name="email" type="text" maxlength="20" value="'.$_REQUEST['email'].'"/></p>'.
         '<p><label> Severity : </label>'.
-        '  <select class="element select small dokumicrobugtracker__option" name="severity">'.
-        '       <option value="Minor Bug" >Minor Bug</option>'.
-        '       <option value="Feature Request" >Feature Request</option>'.
-        '       <option value="Major Bug" >Major Bug</option>'.
-        '	 </select></p>'.      
+        '  <select class="element select small dokumicrobugtracker__option" name="severity">';
+        $severities = explode(',', $this->getConf('severities'));
+        foreach ($severities as $severity) {
+            $ret .= '<option value="'.$severity.'" >'.$severity.'</option>';
+        }
+        $ret .= ' </select></p>'.      
         '<p><label> Description : </label><br /><textarea class="dokumicrobugtracker__option" name="description">'.$_REQUEST['description'].'</textarea></p>';
 		
         if ($this->getConf('use_captcha')==1)
@@ -300,7 +313,6 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 			}
 		}
 		
-        //    $ret .= '<p><img src="'.DOKU_BASE.'lib/plugins/dokumicrobugtracker/image.php" alt="captcha" /><label>what s the result? </label><input class="dokumicrobugtracker__option" name="captcha" type="text" maxlength="3" value=""/></p>';      
 
         $ret .= '<p><input class="button" type="submit" '.
         'value="Report" /></p>'.

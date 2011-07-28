@@ -1,14 +1,6 @@
 <?php
 
-
-//if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
-//require_once(DOKU_INC.'../inc/init.php');
-//if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'plugins/');
 require_once(realpath(dirname(__FILE__)).'/../../../inc/init.php');
-//require_once(DOKU_INC.'../inc/utf8.php');
-//require_once(DOKU_INC.'../inc/pageutils.php');
-
-//require_once(DOKU_PLUGIN.'syntax.php');
 
 // POST Sent by the edited array
 
@@ -19,6 +11,41 @@ require_once(realpath(dirname(__FILE__)).'/../../../inc/init.php');
 //    * &value=xxxxxx: The rest of the POST body is the serialised form. The default name of the field is 'value'.
 
 global $ID;
+if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
+
+
+function emailForChange($email, $id,$project,$field, $oldvalue,$value)
+{
+        global $conf;
+        if (mail_isvalid($email)) {
+
+            
+            if ($conf['plugin']['dokumicrobugtracker']['email_subject_template']== '')
+               {$conf['plugin']['dokumicrobugtracker']['email_subject_template'] = "The bug report @ID@ in the project @PROJECT@ changed";}
+            if ($conf['plugin']['dokumicrobugtracker']['email_body_template']== '')
+                {$conf['plugin']['dokumicrobugtracker']['email_body_template'] = "Hi, \n\nYou receive this bug change notification as you report the bug #@ID@ in the project '@PROJECT@'.\n\n--------------------------------------------------------------------------------\n\nWhat : @FIELD@\n\nRemoved: @OLDVALUE@\n\nAdded: @VALUE@";}
+
+            $subject = $conf['plugin']['dokumicrobugtracker']['email_subject_template'];
+            $body = $conf['plugin']['dokumicrobugtracker']['email_body_template'];
+            
+            $body =  str_replace('\n', "\n", $body);
+            foreach (array('ID' => $id,
+                           'PROJECT' => $project,
+                           'FIELD' => $field,
+                           'OLDVALUE' => $oldvalue,
+                           'VALUE'  => $value,) as $var => $val) {
+                    $body = str_replace('@' . $var . '@', $val, $body);
+                    $subject = str_replace('@' . $var . '@', $val, $subject);
+                }
+
+            $from= $conf['plugin']['dokumicrobugtracker']['email_address'];
+
+            $to=$email;
+
+            mail_send($to, $subject, $body, $from, $cc='', $bcc='', $headers=null, $params=null);
+        }
+}
+    
 function metaFN1($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
 
 $exploded = explode(' ',htmlspecialchars(stripslashes($_POST['id'])));
@@ -36,15 +63,16 @@ else
 $field = strtolower(htmlspecialchars(stripslashes($_POST['field'])));
 $value = htmlspecialchars(stripslashes($_POST['value']));
 
-//echo auth_isadmin();
-//echo $_POST;
-//print_r($_POST);
 
 if (($field == 'status') || ($field == 'severity') || ($field == 'version') || ($field == 'description')|| ($field == 'resolution') || ($field == 'delete') && (auth_isadmin()==1))
-    {	if ($field == 'delete')		{unset($arr):}	else
-		{$bugs[$id_bug][$field]=$value;}
-//    echo $id_bug;
-//    echo $pfile;
+    {
+        if ($field == 'delete')		
+            {unset($arr);}
+    else
+        {
+        emailForChange($bugs[$id_bug]['author'],$id_bug, $project, $field, $bugs[$id_bug][$field], $value);
+        $bugs[$id_bug][$field]=$value;
+        }
     }
 
 // Save bugs file contents
