@@ -237,9 +237,9 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
     {
         global $ID;
         if (auth_quickaclcheck($ID) >= AUTH_ADMIN)        
-            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable inline\"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        } 
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        } 
         else       
-            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable inline\"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
         
         $body = "<tbody>";
         foreach ($bugs as $bug)
