@@ -190,35 +190,25 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         return $rendered_count;
     }
     
+    function _explode_pref_to_jsarray($pref_name)
+    {
+        $jsarray = "";
+        $values = explode(',', $this->getConf($pref_name));
+        foreach ($values as $value) {
+            $jsarray .= '[\''.$value.'\',\''.$value.'\'],';
+        }
+        return $jsarray;
+    }
+    
     function _scripts_render()
     {
         $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
         return    "<script type=\"text/javascript\" src=\"".$BASE."prototype.js\"></script>        <script type=\"text/javascript\" src=\"".$BASE."fabtabulous.js\"></script>
         <script type=\"text/javascript\" src=\"".$BASE."tablekit.js\"></script>
         <script type=\"text/javascript\">
-            TableKit.Sortable.addSortType(new TableKit.Sortable.Type('Status', {editAjaxURI : '".$BASE."edit.php', ajaxURI : '".$BASE."edit.php',
-                    pattern : /^[New|Fixed|Closed]$/,
-                    normal : function(v) {
-                        var val = 3;
-                        switch(v) {
-                            case 'New':
-                                val = 0;
-                                break; 
-							case 'Fixed':
-                                val = 1;
-                                break; 
-                            case 'Closed':
-                                val = 2;
-                                break;
-                            default:
-                                val = 1;
-                                break;
-                        }
-                        return val;
-                    }
-                }
-            ));
             TableKit.options.editAjaxURI = '".$BASE."edit.php';
+            TableKit.Editable.selectInput('Severity', {}, [".$this->_explode_pref_to_jsarray('severities')."]);
+            TableKit.Editable.selectInput('Status', {}, [".$this->_explode_pref_to_jsarray('statuses')."]);
             TableKit.Editable.multiLineInput('Description');
             var _tabs = new Fabtabs('tabs');
             $$('a.next-tab').each(function(a) {
@@ -229,7 +219,20 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                     _tabs.menu.without(t).each(_tabs.hide.bind(_tabs));
 
                     }.bindAsEventListener(a));
-            });
+            });         
+        </script>
+        <script  type=\"text/javascript\">
+        function deleteBug( bug_id ) {
+            var answer = confirm('Are you sure you want to delete this report ?');
+            if (answer) {
+                new Ajax.Request('".$BASE."edit.php',
+                  {
+                    postBody:'id='+bug_id+'&field=delete',
+                    method:'POST',
+                  });
+              }
+
+        }
         </script>";
     }
 
@@ -237,17 +240,14 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
     {
         global $ID;
         if (auth_quickaclcheck($ID) >= AUTH_ADMIN)        
-            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        } 
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td><td class=\"noedit nocol\"></td></tr></thead>";        } 
         else       
             {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
         
         $body = "<tbody>";
         foreach ($bugs as $bug)
         {
-			if (auth_quickaclcheck($ID) >= AUTH_ADMIN)
-			{
-				
-			}
+
 			
             if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status']))
             {
@@ -257,8 +257,14 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                 '<td>'.$this->_get_one_value($bug,'severity').'</td>'.
                 '<td>'.$this->_get_one_value($bug,'version').'</td>'.
                 '<td class="canbreak">'.$this->_get_one_value($bug,'description').'</td>'.
-                '<td>'.$this->_get_one_value($bug,'resolution').'</td>'. 
-                '</tr>';        
+                '<td>'.$this->_get_one_value($bug,'resolution').'</td>';
+                if (auth_quickaclcheck($ID) >= AUTH_ADMIN)
+			    {
+			    $body .= '<td class="nocol noedit nosort"><a href="#" onclick="deleteBug(\''.$data['project'].' '.$this->_get_one_value($bug,'id').'\'); return false">Delete</a></td>';    
+			        	
+			    }
+			    $body .= '</tr>';    
+    			    
             }
         }
         $body .= '</tbody></table></div>';        
@@ -292,7 +298,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         '<input type="hidden" name="do" value="show" />'.
         '<input type="hidden" name="id" value="'.$ID.'" />'.
         '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/>'.
-        '<label> Email : </label><input class="dokumicrobugtracker__option" name="email" type="text" maxlength="20" value="'.$_REQUEST['email'].'"/></p>'.
+        '<label> Email : </label><input class="dokumicrobugtracker__option" name="email" type="text" value="'.$_REQUEST['email'].'"/></p>'.
         '<p><label> Severity : </label>'.
         '  <select class="element select small dokumicrobugtracker__option" name="severity">';
         $severities = explode(',', $this->getConf('severities'));
