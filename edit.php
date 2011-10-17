@@ -4,15 +4,16 @@ require_once(realpath(dirname(__FILE__)).'/../../../inc/init.php');
 
 // POST Sent by the edited array
 
-//    * &row=n: The row index of the edited cell
-//    * &cell=n: The cell index of the edited cell
-//    * &id=id: The id attribute of the row, it may be useful to set this to the record ID you are editing
+//    * &row_id=row_id: The project + id attribute of the row, it may be useful to set this to the record ID you are editing 
 //    * &field=field: The id attribute of the header cell of the column of the edited cell, it may be useful to set this to the field name you are editing
 //    * &value=xxxxxx: The rest of the POST body is the serialised form. The default name of the field is 'value'.
 
 global $ID;
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 
+if (auth_quickaclcheck($ID) < AUTH_ADMIN) {
+    die;
+}
 
 function emailForChange($email, $id,$project,$field, $oldvalue,$value)
 {
@@ -46,21 +47,21 @@ function emailForChange($email, $id,$project,$field, $oldvalue,$value)
         }
 }
     
-function metaFN1($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
+function metaFN2($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
 
-$exploded = explode(' ',htmlspecialchars(stripslashes($_POST['id'])));
+$exploded = explode(' ',htmlspecialchars(stripslashes($_POST['row_id'])));
 $project = $exploded[0];
 $id_bug = intval($exploded[1]);
 
 // get bugs file contents
-$pfile = metaFN1(md5($project), '.bugs');
+$pfile = metaFN2(md5($project), '.bugs');
 if (@file_exists($pfile))
     {$bugs  = unserialize(@file_get_contents($pfile));}
 else 
     {$bugs = array();}
 
 
-$field = strtolower(htmlspecialchars(stripslashes($_POST['field'])));
+$field = strtolower(htmlspecialchars($_POST['field']));
 $value = htmlspecialchars(stripslashes($_POST['value']));
 
 

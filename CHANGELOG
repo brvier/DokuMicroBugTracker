@@ -10,3 +10,4 @@ Version 2011-03-07 	Fix #11, #21 : Fix edit and url callback.
 Version 2011-04-13 	Fix #27, remove the forced title in the form, fix multiple post occurring when displaying multiple bugs list and report in the same page. 
 Version 2011-08-24  Implement #65 (Configurable severity), Implement #62 (Inform user of modification on a report), Implement #64 (No report without information), Use captcha helper plugin for consistent captcha on the wiki, Fix #34
 Version 2011-08-30  Implement list option for Status, Add default stylesheet, Column size are now resizable, add delete feature with confirmation, fix bug #69 : email lenght was limited to 20 chars
+Version 2011-10-17  Use jquery, datatables plugin and jEditable to manage table, and fix a security issue.

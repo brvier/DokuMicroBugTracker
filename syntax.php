@@ -9,7 +9,7 @@
 if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 require_once(DOKU_PLUGIN.'syntax.php');
-function metaFN1($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
+function metaFN2($id,$ext){    global $conf;    $id = cleanID($id);    $id = str_replace(':','/',$id);    $fn = $conf['metadir'].'/'.utf8_encodeFN($id).$ext;    return $fn;}
 
 /**
 * All DokuWiki plugins to extend the parser/rendering mechanism
@@ -39,11 +39,11 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
     */
     function handle($match, $state, $pos, &$handler){
         $match = substr($match,22,-2); //strip markup from start and end
-
         //handle params
         $data = array();
+        $data['match'] = $match;
         $params = explode('|',$match,3);
-
+        
         //Default Value
         $data['display'] = 'ALL';
         $data['status'] = 'ALL';
@@ -91,12 +91,14 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
             $renderer->info['cache'] = false;
             
             // get bugs file contents
-            $pfile = metaFN1(md5($data['project']), '.bugs');            
+            $pfile = metaFN2(md5($data['project']), '.bugs');            
             if (@file_exists($pfile))
             	{$bugs  = unserialize(@file_get_contents($pfile));}
             else
             	{$bugs = array();}
 				
+		    
+            
 			$Generated_Header = '';
             if (($data['display']=='FORM') || ($data['display']=='ALL'))
             {
@@ -164,6 +166,8 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
             if (($data['display']=='FORM') || ($data['display']=='ALL'))
             {$Generated_Report = $this->_report_render();}
                         
+//            $Generated_Header = '<div class ="error">Debug handle match: '.$data['match'].'</div>';
+//            $Generated_Header .= '<div class ="error">Debug project: '.$data['project'].'</div>';
             // Render            
             $renderer->doc .= $Generated_Header.$Generated_Table.$Generated_Scripts.$Generated_Report;
         }
@@ -199,50 +203,88 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         }
         return $jsarray;
     }
+
+
     
-    function _scripts_render()
+    
+    function _edit_scripts_render()
     {
         $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
-        return    "<script type=\"text/javascript\" src=\"".$BASE."prototype.js\"></script>        <script type=\"text/javascript\" src=\"".$BASE."fabtabulous.js\"></script>
-        <script type=\"text/javascript\" src=\"".$BASE."tablekit.js\"></script>
-        <script type=\"text/javascript\">
-            TableKit.options.editAjaxURI = '".$BASE."edit.php';
-            TableKit.Editable.selectInput('Severity', {}, [".$this->_explode_pref_to_jsarray('severities')."]);
-            TableKit.Editable.selectInput('Status', {}, [".$this->_explode_pref_to_jsarray('statuses')."]);
-            TableKit.Editable.multiLineInput('Description');
-            var _tabs = new Fabtabs('tabs');
-            $$('a.next-tab').each(function(a) {
-                Event.observe(a, 'click', function(e){
-                    Event.stop(e);
-                    var t = $(this.href.match(/#(\w.+)/)[1]+'-tab');
-                    _tabs.show(t);
-                    _tabs.menu.without(t).each(_tabs.hide.bind(_tabs));
+        return    "
+        <script type=\"text/javascript\"><!--
+jQuery(document).ready(function() {
+   /* Init DataTables */
+   var oTable = jQuery('.display').dataTable( {
+        \"aaSorting\": [[ 0, \"desc\" ]],
+        \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
+        \"bLengthChange\": false,
+        \"bAutoWidth\": false
+      });
+   
+   /* Apply the jEditable handlers to the table */
+   jQuery('td[class!=\"nocol noedit nosort\"]', oTable.fnGetNodes()).editable( '".$BASE."edit.php', {
+      \"placeholder\": '',
+      \"callback\": function( sValue, y ) {
+         var aPos = oTable.fnGetPosition( this );
+         oTable.fnUpdate( sValue, aPos[0], aPos[1] );
+      },
+      \"submitdata\": function ( value, settings ) {
+        var oSettings = oTable.fnSettings();  // you can find all sorts of goodies in the Settings
+        var col_id = oSettings.aoColumns[oTable.fnGetPosition( this )[2]].sTitle;  //for this code, we just want the sTitle
 
-                    }.bindAsEventListener(a));
-            });         
-        </script>
-        <script  type=\"text/javascript\">
-        function deleteBug( bug_id ) {
-            var answer = confirm('Are you sure you want to delete this report ?');
-            if (answer) {
-                new Ajax.Request('".$BASE."edit.php',
-                  {
-                    postBody:'id='+bug_id+'&field=delete',
-                    method:'POST',
-                  });
-              }
 
-        }
-        </script>";
+         return {
+            \"row_id\": this.parentNode.getAttribute('id'),
+            \"field\": col_id,
+
+            \"column\": oTable.fnGetPosition( this )[2]
+         };
+      },
+      \"height\": \"14px\"
+   });
+   
+   jQuery('td.editbox').bind('keydown', function(event) {
+if(event.keyCode==9) {
+jQuery(this).find(\"input\").submit();
+if ($(this).is(\".lasteditbox\")) {
+jQuery(\"td.editbox:first\").click();
+} else {
+   jQuery(this).next(\"td.editbox\").click();
+}
+return false;
+      }
+   });
+});
+// --></script>";
     }
 
+    function _default_scripts_render() {
+        $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
+        return    "
+        <script type=\"text/javascript\"><!--
+            jQuery(document).ready(function() {
+           /* Init DataTables */
+               var oTable = jQuery('.display').dataTable();
+            });
+// --></script>";
+    }
+
+    function _scripts_render() {
+        global $ID;
+        if (auth_quickaclcheck($ID) >= AUTH_ADMIN) {
+            return $this->_edit_scripts_render();
+        } else {
+            return $this->_default_scripts_render();
+        }
+    }
+    
     function _table_render($bugs,$data)
     {
         global $ID;
         if (auth_quickaclcheck($ID) >= AUTH_ADMIN)        
-            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable editable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td><td class=\"noedit nocol\"></td></tr></thead>";        } 
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"display sortable editable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td><td class=\"noedit nocol\"></td></tr></thead>";        } 
         else       
-            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"sortable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
+            {            $head = "<div class='dokumicrobugtracker_div'><table id='".$data['project']."' class=\"display sortable inline resizable \"><thead><tr><td id='id'>Id</td><td id='Status'>Status</td><td id='Severity'>Severity</td><td id='Version'>Version</td><td id='Description'>Description</td><td id='Resolution'>Resolution</td></tr></thead>";        }
         
         $body = "<tbody>";
         foreach ($bugs as $bug)
@@ -251,13 +293,13 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 			
             if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status']))
             {
-                $body .= '<tr id = "'.$data['project'].' '.$this->_get_one_value($bug,'id').'">'.
-                '<td>'.$this->_get_one_value($bug,'id').'</td>'.
-                '<td>'.$this->_get_one_value($bug,'status').'</td>'.
-                '<td>'.$this->_get_one_value($bug,'severity').'</td>'.
-                '<td>'.$this->_get_one_value($bug,'version').'</td>'.
-                '<td class="canbreak">'.$this->_get_one_value($bug,'description').'</td>'.
-                '<td>'.$this->_get_one_value($bug,'resolution').'</td>';
+                $body .= '<tr id = "'.$data['project'].' '.$this->_get_one_value($bug,'id').'" class="'.$this->_status_color($bug).'">'.
+                            '<td>'.$this->_get_one_value($bug,'id').'</td>'.
+                            '<td>'.$this->_get_one_value($bug,'status').'</td>'.
+                            '<td>'.$this->_get_one_value($bug,'severity').'</td>'.
+                            '<td>'.$this->_get_one_value($bug,'version').'</td>'.
+                            '<td class="canbreak">'.$this->_get_one_value($bug,'description').'</td>'.
+                            '<td>'.$this->_get_one_value($bug,'resolution').'</td>';
                 if (auth_quickaclcheck($ID) >= AUTH_ADMIN)
 			    {
 			    $body .= '<td class="nocol noedit nosort"><a href="#" onclick="deleteBug(\''.$data['project'].' '.$this->_get_one_value($bug,'id').'\'); return false">Delete</a></td>';    
@@ -271,6 +313,17 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         return $head.$body;
     }
 
+    function _status_color($bug) {
+        $statuses = explode(',', $this->getConf('statuses'));
+        $key = array_search($bug['status'],$statuses);
+        
+        if ($key == 0)
+            return 'status_bad';
+        if ($key == count($statuses) - 1)
+            return  'status_good';
+        return 'status_normal';
+    }
+    
     function _get_one_value($bug, $key) {
         if (array_key_exists($key,$bug))
             return $bug[$key];
@@ -326,6 +379,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
 
         return $ret;    
     }
+
 
     function _show_message($string){
         return "<script type='text/javascript'>

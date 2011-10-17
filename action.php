@@ -31,9 +31,16 @@ class action_plugin_dokumicrobugtracker extends DokuWiki_Action_Plugin {
      * Add Js & Css after template is displayed
      */
     function init_css (&$event, $param)  {
-       $event->data["link"][] = array ("type" => "text/css",
-	  "src" => DOKU_BASE."lib/plugins/dokumicrobugtracker/style.css"
-				          );
+      // $event->data["link"][] = array ("type" => "text/css","src" => DOKU_BASE."lib/plugins/dokumicrobugtracker2/css/demo_table.css",);
+      // $event->data["link"][] = array ("type" => "text/css","src" => DOKU_BASE."lib/plugins/dokumicrobugtracker2/css/demo_table_jui.css",);
+
+      $event->data["script"][] = array ("type" => "text/javascript", "src" => DOKU_BASE."lib/plugins/dokumicrobugtracker/js/jquery.js",);
+      $event->data["script"][] = array ("type" => "text/javascript", "_data" => 'jQuery.noConflict();',);
+      $event->data["script"][] = array ("type" => "text/javascript", "src" => DOKU_BASE."lib/plugins/dokumicrobugtracker/js/jquery.jeditable.mini.js",);
+      $event->data["script"][] = array ("type" => "text/javascript", "src" => DOKU_BASE."lib/plugins/dokumicrobugtracker/js/jquery.dataTables.min.js",);
+//        array ("type" => "text/javascript", "src" => DOKU_PLUGIN."lib/plugins/dokumicrobugtracker2/js/jquery.jeditable.mini.js",),
+//        array ("type" => "text/javascript", "src" => DOKU_PLUGIN."lib/plugins/dokumicrobugtracker2/js/jquery.dataTables.min.js",),
+//        );
     }
 
 }
