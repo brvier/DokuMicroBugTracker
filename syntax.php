@@ -217,8 +217,8 @@ jQuery(document).ready(function() {
    var oTable = jQuery('.display').dataTable( {
         \"aaSorting\": [[ 0, \"desc\" ]],
         \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
-        \"bLengthChange\": false,
-        \"bAutoWidth\": false
+        \"bLengthChange\": true,
+        \"bAutoWidth\": true
       });
    
    /* Apply the jEditable handlers to the table */
