@@ -212,6 +212,24 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
             <script type=\"text/javascript\"><!--
                 jQuery(document).ready(function() {
                    /* Init DataTables */
+                    //Delete row
+                    jQuery('td.deleterow').click( function () {
+                        /* Get the position of the current data from the node */
+                        var aPos = oTable.fnGetPosition( this );
+                        /* Get the data array for this row */
+                        var answer = confirm('Are you sure you want to delete this report ?');
+                        if (answer) {
+                            jQuery.ajax({
+                                url : '".$BASE."edit.php',
+                                type: 'POST',
+                                data: 'row_id='+this.parentNode.getAttribute('id')+'&field=delete',
+                                method:'POST',
+                                }).done(function() {
+                                    oTable.fnDeleteRow(aPos[0]);
+                            });
+                        }
+                        });
+                            
                    var oTable = jQuery('.display').dataTable( {
                         \"aaSorting\": [[ 0, \"desc\" ]],
                         \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
@@ -253,25 +271,6 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                             return false;
                             }
                         });
-
-
-                        //Delete row
-                        jQuery('td.deleterow').click( function () {
-                            /* Get the position of the current data from the node */
-                            var aPos = oTable.fnGetPosition( this );
-                            /* Get the data array for this row */
-                            var answer = confirm('Are you sure you want to delete this report ('+ aPos[0]+') ?');
-                            if (answer) {
-                                jQuery.ajax({
-                                    url : '".$BASE."edit.php',
-                                    type: 'POST',
-                                    data: 'row_id='+this.parentNode.getAttribute('id')+'&field=delete',
-                                    method:'POST',
-                                    }).done(function() {
-                                        oTable.fnDeleteRow(aPos[0]);
-                                });
-                            }
-                            });
                 });
             // --></script>";
     }
