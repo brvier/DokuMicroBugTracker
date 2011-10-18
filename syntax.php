@@ -166,8 +166,6 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
             if (($data['display']=='FORM') || ($data['display']=='ALL'))
             {$Generated_Report = $this->_report_render();}
                         
-//            $Generated_Header = '<div class ="error">Debug handle match: '.$data['match'].'</div>';
-//            $Generated_Header .= '<div class ="error">Debug project: '.$data['project'].'</div>';
             // Render            
             $renderer->doc .= $Generated_Header.$Generated_Table.$Generated_Scripts.$Generated_Report;
         }
@@ -211,62 +209,82 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
     {
         $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
         return    "
-        <script type=\"text/javascript\"><!--
-jQuery(document).ready(function() {
-   /* Init DataTables */
-   var oTable = jQuery('.display').dataTable( {
-        \"aaSorting\": [[ 0, \"desc\" ]],
-        \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
-        \"bLengthChange\": true,
-        \"bAutoWidth\": true
-      });
+            <script type=\"text/javascript\"><!--
+                jQuery(document).ready(function() {
+                   /* Init DataTables */
+                   var oTable = jQuery('.display').dataTable( {
+                        \"aaSorting\": [[ 0, \"desc\" ]],
+                        \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
+                        \"bLengthChange\": true,
+                        \"bAutoWidth\": true
+                      });
    
-   /* Apply the jEditable handlers to the table */
-   jQuery('td[class!=\"nocol noedit nosort\"]', oTable.fnGetNodes()).editable( '".$BASE."edit.php', {
-      \"placeholder\": '',
-      \"callback\": function( sValue, y ) {
-         var aPos = oTable.fnGetPosition( this );
-         oTable.fnUpdate( sValue, aPos[0], aPos[1] );
-      },
-      \"submitdata\": function ( value, settings ) {
-        var oSettings = oTable.fnSettings();  // you can find all sorts of goodies in the Settings
-        var col_id = oSettings.aoColumns[oTable.fnGetPosition( this )[2]].sTitle;  //for this code, we just want the sTitle
+                       /* Apply the jEditable handlers to the table */
+                       jQuery('td[class!=\"deleterow\"]', oTable.fnGetNodes()).editable( '".$BASE."edit.php', {
+                          \"placeholder\": '',
+                          \"callback\": function( sValue, y ) {
+                             var aPos = oTable.fnGetPosition( this );
+                             oTable.fnUpdate( sValue, aPos[0], aPos[1] );
+                          },
+                          \"submitdata\": function ( value, settings ) {
+                            var oSettings = oTable.fnSettings();  // you can find all sorts of goodies in the Settings
+                            var col_id = oSettings.aoColumns[oTable.fnGetPosition( this )[2]].sTitle;  //for this code, we just want the sTitle
 
 
-         return {
-            \"row_id\": this.parentNode.getAttribute('id'),
-            \"field\": col_id,
+                             return {
+                                \"row_id\": this.parentNode.getAttribute('id'),
+                                \"field\": col_id,
 
-            \"column\": oTable.fnGetPosition( this )[2]
-         };
-      },
-      \"height\": \"14px\"
-   });
+                                \"column\": oTable.fnGetPosition( this )[2]
+                             };
+                          },
+                          \"height\": \"14px\"
+                       });
    
-   jQuery('td.editbox').bind('keydown', function(event) {
-if(event.keyCode==9) {
-jQuery(this).find(\"input\").submit();
-if ($(this).is(\".lasteditbox\")) {
-jQuery(\"td.editbox:first\").click();
-} else {
-   jQuery(this).next(\"td.editbox\").click();
-}
-return false;
-      }
-   });
-});
-// --></script>";
+                       //Bind keydown for auto validation
+                       jQuery('td.editbox').bind('keydown', function(event) {
+                            if(event.keyCode==9) {
+                                jQuery(this).find(\"input\").submit();
+                                if ($(this).is(\".lasteditbox\")) {
+                                    jQuery(\"td.editbox:first\").click();
+                                } else {
+                                    jQuery(this).next(\"td.editbox\").click();
+                                }
+                            return false;
+                            }
+                        });
+
+
+                        //Delete row
+                        jQuery('td.deleterow').click( function () {
+                            /* Get the position of the current data from the node */
+                            var aPos = oTable.fnGetPosition( this );
+                            /* Get the data array for this row */
+                            var answer = confirm('Are you sure you want to delete this report ('+ aPos[0]+') ?');
+                            if (answer) {
+                                jQuery.ajax({
+                                    url : '".$BASE."edit.php',
+                                    type: 'POST',
+                                    data: 'row_id='+this.parentNode.getAttribute('id')+'&field=delete',
+                                    method:'POST',
+                                    }).done(function() {
+                                        oTable.fnDeleteRow(aPos[0]);
+                                });
+                            }
+                            });
+                });
+            // --></script>";
     }
 
     function _default_scripts_render() {
         $BASE = DOKU_BASE."lib/plugins/dokumicrobugtracker/";
         return    "
-        <script type=\"text/javascript\"><!--
-            jQuery(document).ready(function() {
-           /* Init DataTables */
-               var oTable = jQuery('.display').dataTable();
-            });
-// --></script>";
+            <script type=\"text/javascript\"><!--
+                jQuery(document).ready(function() {
+                    /* Init DataTables */
+                    var oTable = jQuery('.display').dataTable();
+                    });
+            // --></script>";
     }
 
     function _scripts_render() {
@@ -291,8 +309,7 @@ return false;
         {
 
 			
-            if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status']))
-            {
+            if (($data['status']=='ALL') || (strtoupper($bug['status'])==$data['status'])) {
                 $body .= '<tr id = "'.$data['project'].' '.$this->_get_one_value($bug,'id').'" class="'.$this->_status_color($bug).'">'.
                             '<td>'.$this->_get_one_value($bug,'id').'</td>'.
                             '<td>'.$this->_get_one_value($bug,'status').'</td>'.
@@ -300,13 +317,10 @@ return false;
                             '<td>'.$this->_get_one_value($bug,'version').'</td>'.
                             '<td class="canbreak">'.$this->_get_one_value($bug,'description').'</td>'.
                             '<td>'.$this->_get_one_value($bug,'resolution').'</td>';
-                if (auth_quickaclcheck($ID) >= AUTH_ADMIN)
-			    {
-			    $body .= '<td class="nocol noedit nosort"><a href="#" onclick="deleteBug(\''.$data['project'].' '.$this->_get_one_value($bug,'id').'\'); return false">Delete</a></td>';    
-			        	
-			    }
-			    $body .= '</tr>';    
-    			    
+                if (auth_quickaclcheck($ID) >= AUTH_ADMIN) {
+                    $body .= '<td class="deleterow">Delete</td>';    
+                }
+                $body .= '</tr>';    
             }
         }
         $body .= '</tbody></table></div>';        
@@ -348,34 +362,30 @@ return false;
         global $ID;
 		$ret = '<br /><br /><form class="dokumicrobugtracker__form" method="post" action="'.$_SERVER['REQUEST_URI'].'" accept-charset="'.$lang['encoding'].'"><p>';
         $ret .= formSecurityToken(false).
-        '<input type="hidden" name="do" value="show" />'.
-        '<input type="hidden" name="id" value="'.$ID.'" />'.
-        '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/>'.
-        '<label> Email : </label><input class="dokumicrobugtracker__option" name="email" type="text" value="'.$_REQUEST['email'].'"/></p>'.
-        '<p><label> Severity : </label>'.
-        '  <select class="element select small dokumicrobugtracker__option" name="severity">';
+            '<input type="hidden" name="do" value="show" />'.
+            '<input type="hidden" name="id" value="'.$ID.'" />'.
+            '<label> Version : </label><input class="dokumicrobugtracker__option" name="version" type="text" maxlength="20" value="'.$_REQUEST['version'].'"/>'.
+            '<label> Email : </label><input class="dokumicrobugtracker__option" name="email" type="text" value="'.$_REQUEST['email'].'"/></p>'.
+            '<p><label> Severity : </label>'.
+            '  <select class="element select small dokumicrobugtracker__option" name="severity">';
         $severities = explode(',', $this->getConf('severities'));
         foreach ($severities as $severity) {
             $ret .= '<option value="'.$severity.'" >'.$severity.'</option>';
         }
         $ret .= ' </select></p>'.      
-        '<p><label> Description : </label><br /><textarea class="dokumicrobugtracker__option" name="description">'.$_REQUEST['description'].'</textarea></p>';
-		
-        if ($this->getConf('use_captcha')==1)
-		{
-		$helper = null;
-		if(@is_dir(DOKU_PLUGIN.'captcha'))
-			$helper = plugin_load('helper','captcha');
-		if(!is_null($helper) && $helper->isEnabled())
-			{
-			$ret .= '<p>'.$helper->getHTML().'</p>';
-			}
-		}
-		
+            '<p><label> Description : </label><br /><textarea class="dokumicrobugtracker__option" name="description">'.$_REQUEST['description'].'</textarea></p>';
+
+        if ($this->getConf('use_captcha')==1) {
+            $helper = null;
+            if(@is_dir(DOKU_PLUGIN.'captcha')) {
+                $helper = plugin_load('helper','captcha'); }
+            if(!is_null($helper) && $helper->isEnabled()) {
+                $ret .= '<p>'.$helper->getHTML().'</p>';}
+        }
 
         $ret .= '<p><input class="button" type="submit" '.
-        'value="Report" /></p>'.
-        '</form>';
+            'value="Report" /></p>'.
+            '</form>';
 
         return $ret;    
     }

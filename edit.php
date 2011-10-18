@@ -67,8 +67,8 @@ $value = htmlspecialchars(stripslashes($_POST['value']));
 
 if (($field == 'status') || ($field == 'severity') || ($field == 'version') || ($field == 'description')|| ($field == 'resolution') || ($field == 'delete') && (auth_isadmin()==1))
     {
-        if ($field == 'delete')		
-            {unset($bugs[$id_bug]);}
+        if ($field == 'delete')
+            {unset($bugs[$id_bug]);echo 'Deleted : ' . $id_bug;}
     else
         {
         emailForChange($bugs[$id_bug]['author'],$id_bug, $project, $field, $bugs[$id_bug][$field], $value);
