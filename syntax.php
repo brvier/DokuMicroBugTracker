@@ -211,7 +211,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
         return    "
             <script type=\"text/javascript\"><!--
                 jQuery(document).ready(function() {
-                   /* Init DataTables */
+                   
                     //Delete row
                     jQuery('td.deleterow').click( function () {
                         /* Get the position of the current data from the node */
@@ -230,6 +230,7 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
                         }
                         });
                             
+                   /* Init DataTables */
                    var oTable = jQuery('.display').dataTable( {
                         \"aaSorting\": [[ 0, \"desc\" ]],
                         \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
@@ -281,7 +282,12 @@ class syntax_plugin_dokumicrobugtracker extends DokuWiki_Syntax_Plugin
             <script type=\"text/javascript\"><!--
                 jQuery(document).ready(function() {
                     /* Init DataTables */
-                    var oTable = jQuery('.display').dataTable();
+                    var oTable = jQuery('.display').dataTable( {
+                        \"aaSorting\": [[ 0, \"desc\" ]],
+                        \"aLengthMenu\": [[10, 25, 50, -1], [10, 25, 50, \"All\"]],
+                        \"bLengthChange\": true,
+                        \"bAutoWidth\": true
+                        });
                     });
             // --></script>";
     }
